@@ -1,0 +1,13 @@
+[project]
+name = "imagenette-pre-aravind"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "matplotlib>=3.9.4",
+    "torch>=2.8.0",
+    "torch-lr-finder>=0.2.2",
+    "torchsummary>=1.5.1",
+    "torchvision>=0.23.0",
+]
