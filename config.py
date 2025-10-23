@@ -6,7 +6,7 @@ class Config:
     # Data
     DATA_SET_PATH = 'C:/Users/achakravarti/Documents/ERAv4/imagenette2-320'
     BATCH_SIZE = 64
-    NUM_WORKERS = 2
+    NUM_WORKERS = 4
     IMAGE_SIZE = 32
     NORM_MEAN = [0.485, 0.456, 0.406]
     NORM_STD = [0.229, 0.224, 0.225]

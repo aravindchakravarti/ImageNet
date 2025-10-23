@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import torch
 import logging
 from torch_lr_finder import LRFinder
-from model_v1 import ResNet
+import numpy as np
+
 from torch import nn
 from config import Config
 
@@ -63,14 +64,13 @@ def dataset_visualizer(dataset_loader, n_images=12):
     plt.show()
 
 
-def indentify_optim_lr(device, train_loader, resnet_layers, num_classes, use_depthwise, lr_finder_end_lr, lr_finder_num_iter):
+def identify_optim_lr(model, device, train_loader, lr_finder_end_lr, lr_finder_num_iter):
     amp_config = {
         'device_type': 'cuda',
         'dtype': torch.float16,
     }
     grad_scaler = torch.cuda.amp.GradScaler()
 
-    model = ResNet(layers=resnet_layers, num_classes=num_classes, use_depthwise=use_depthwise).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-4, weight_decay=1e-2)
 
@@ -79,5 +79,25 @@ def indentify_optim_lr(device, train_loader, resnet_layers, num_classes, use_dep
         amp_backend='torch', amp_config=amp_config, grad_scaler=grad_scaler
     )
     lr_finder.range_test(train_loader, end_lr=lr_finder_end_lr, num_iter=lr_finder_num_iter, step_mode='exp')
-    lr_finder.plot()
+
+    # Convert to numpy arrays
+    losses = np.array(lr_finder.history['loss'])
+    lrs = np.array(lr_finder.history['lr'])
+
+    # Compute rate of change (gradient) of loss
+    loss_grad = np.gradient(losses)
+    # Find index where slope is steepest (largest negative gradient)
+    min_grad_idx = np.argmin(loss_grad)
+    suggested_lr = lrs[min_grad_idx]
+
+    # Alternatively, choose slightly lower (10x smaller)
+    safe_lr = suggested_lr / 10
+
+    # Plot and save
+    fig = lr_finder.plot()
+    fig.savefig('lr_finder_plot.png')
+    plt.close(fig)
+
     lr_finder.reset()
+
+    return safe_lr
