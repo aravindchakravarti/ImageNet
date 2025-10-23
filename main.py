@@ -5,18 +5,18 @@ from utils import show_dataset_stats, dataset_visualizer, indentify_optim_lr
 import torch
 from torchsummary import summary
 from model_train_utils import prepare_and_train
+from config import Config
 
 
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=getattr(logging, Config.LOG_LEVEL.upper()),
+    format=Config.LOG_FORMAT,
     force=True  # <-- important in Jupyter
 )
 logger = logging.getLogger(__name__)
 
-import sys
-sys.path.append('..')
+
 
 
 def main():
@@ -26,29 +26,29 @@ def main():
     device = torch.device("cuda" if is_cuda else "cpu")
     logger.info(f"Cuda available = {is_cuda}, Using device = {device}")
 
-    data_set_path = 'C:/Users/achakravarti/Documents/ERAv4/imagenette2-320'
-    train_loader, val_loader = get_train_test_loaders(data_set_path)
+    data_set_path = Config.DATA_SET_PATH
+    train_loader, val_loader = get_train_test_loaders(data_set_path, batch_size=Config.BATCH_SIZE, image_size=Config.IMAGE_SIZE, norm_mean=Config.NORM_MEAN, norm_std=Config.NORM_STD)
     # show_dataset_stats(train_loader)
     dataset_visualizer(train_loader)
 
-    model = ResNet(layers=[2,2,3,2], num_classes=10, use_depthwise=(False, False, True, True)).to(device)
+    model = ResNet(layers=Config.RESNET_LAYERS, num_classes=Config.NUM_CLASSES, use_depthwise=Config.USE_DEPTHWISE).to(device)
 
-    dummy_data = torch.randn(5, 3, 224, 224).to(device)
+    dummy_data = torch.randn(5, 3, Config.IMAGE_SIZE, Config.IMAGE_SIZE).to(device)
     dummy_output = model(dummy_data)
-    logger.info("Output shape:", dummy_output.shape)  # should be [5, 100]
-    summary(model, input_size=(3, 224, 224), device=str(device))
+    logger.info("Output shape:", dummy_output.shape)  # should be [5, Config.NUM_CLASSES]
+    summary(model, input_size=(3, Config.IMAGE_SIZE, Config.IMAGE_SIZE), device=str(device))
     
     if device == 'cuda':
-        indentify_optim_lr(device, train_loader)
+        indentify_optim_lr(device, train_loader, Config.RESNET_LAYERS, Config.NUM_CLASSES, Config.USE_DEPTHWISE, Config.LR_FINDER_END_LR, Config.LR_FINDER_NUM_ITER)
 
-    lr_from_lr_finder = input("Enter lr from lr finder:")
-    logger.info("Going to use lr from lr finder:", lr_from_lr_finder)
+    lr_from_lr_finder = Config.LEARNING_RATE
+    logger.info(f"Using learning rate from config: {lr_from_lr_finder}, Type of lr = {type(lr_from_lr_finder)}")
 
-    model = ResNet(layers=[2, 2, 3, 2], num_classes=10,
-               use_depthwise=(False, False, True, True)).to(device)
+    model = ResNet(layers=Config.RESNET_LAYERS, num_classes=Config.NUM_CLASSES,
+               use_depthwise=Config.USE_DEPTHWISE).to(device)
 
     
-    prepare_and_train(model, lr_from_lr_finder, device, train_loader, val_loader, total_epochs=15)
+    prepare_and_train(model, lr_from_lr_finder, device, train_loader, val_loader, total_epochs=Config.TOTAL_EPOCHS)
 
 
 

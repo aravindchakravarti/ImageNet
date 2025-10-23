@@ -7,6 +7,7 @@ import os
 import sys
 import time
 from torch.optim.lr_scheduler import OneCycleLR
+from config import Config
 
 
 import logging
@@ -35,18 +36,9 @@ def load_checkpoint(model, optimizer, scheduler, path, device):
     logger.info(f"✅ Resumed from checkpoint: epoch {start_epoch}, best loss {best_loss:.4f}")
     return start_epoch, best_loss
 
-criterion = nn.CrossEntropyLoss()
-train_loss_data = []
-train_accuracy = []
-test_loss_data = []
-test_accuracy = []
-learning_rate_over_steps = []
 
-best_loss = float('inf')   # initialize with infinity
 
-scaler = GradScaler()
-
-def train(model, device, train_loader, optimizer, scheduler, epoch):
+def train(model, device, train_loader, optimizer, scheduler, epoch, criterion, scaler, train_loss_data, train_accuracy, learning_rate_over_steps):
     model.train()
     pbar = tqdm(train_loader)
 
@@ -91,8 +83,7 @@ def train(model, device, train_loader, optimizer, scheduler, epoch):
 # 3️⃣ Testing Loop
 # ============================================================
 
-def test(model, device, test_loader, epoch):
-    global best_loss  # to update across epochs
+def test(model, device, test_loader, epoch, criterion, test_loss_data, test_accuracy, best_loss, save_dir_file_name):
     model.eval()
     test_loss = 0
     correct = 0
@@ -111,45 +102,48 @@ def test(model, device, test_loader, epoch):
 
     print(f'Test set (epoch {epoch}): Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({acc:.2f}%)')
 
-    # ✅ Save best model by lowest test loss
-    # if test_loss < best_loss:
-    #     best_loss = test_loss
-    #     save_dir = "/content/drive/MyDrive/Imagenet" if 'google.colab' in sys.modules else "."
-    #     os.makedirs(save_dir, exist_ok=True)
-    #     torch.save(model.state_dict(), os.path.join(save_dir, "best_model_imagenette.pt"))
-    #     print(f"✅ Saved new best model at epoch {epoch} with loss {best_loss:.4f}")
-
-    # print("\n\n")
+    # Save best model by lowest test loss
+    if test_loss < best_loss:
+        best_loss = test_loss
+        torch.save(model.state_dict(), save_dir_file_name)
+        logger.info(f"✅ Saved new best model at epoch {epoch} with loss {best_loss:.4f}")
 
     return test_loss
 
-
 def prepare_and_train(model, lr_from_lr_finder, device, train_loader, val_loader, total_epochs):
 
-    # Initialize optimizer
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, weight_decay=1e-4)
-
-    max_lr = float(lr_from_lr_finder)   # Use from LR Finder output
-    total_epochs = 15 # Full plan (even if train 20+20)
+    # Initialize training components
+    criterion = nn.CrossEntropyLoss()
+    train_loss_data = []
+    train_accuracy = []
+    test_loss_data = []
+    test_accuracy = []
+    learning_rate_over_steps = []
     scaler = GradScaler()
+
+    # Initialize optimizer
+    optimizer = torch.optim.SGD(model.parameters(), lr=Config.LEARNING_RATE, weight_decay=Config.WEIGHT_DECAY)
+
+    max_lr = float(lr_from_lr_finder)
     scheduler = OneCycleLR(
         optimizer,
         max_lr=max_lr,
         steps_per_epoch=len(train_loader),
         epochs=total_epochs,
-        pct_start=0.3,
-        anneal_strategy="cos",
-        div_factor=25.0,
-        final_div_factor=1e4,
+        pct_start=Config.PCT_START,
+        anneal_strategy=Config.ANNEAL_STRATEGY,
+        div_factor=Config.DIV_FACTOR,
+        final_div_factor=Config.FINAL_DIV_FACTOR,
     )
 
     start_epoch = 0
-    save_dir = "/content/drive/MyDrive/Imagenet" if 'google.colab' in sys.modules else "."
-    os.makedirs(save_dir, exist_ok=True)
-    save_dir_file_name = os.path.join(save_dir, "checkpoint_imagenette.pt")
-    if os.path.exists(save_dir_file_name):
+    os.makedirs(Config.CHECKPOINT_DIR, exist_ok=True)
+    checkpoint_file_path = os.path.join(Config.CHECKPOINT_DIR, Config.CHECKPOINT_FILE)
+    best_model_file_path = os.path.join(Config.CHECKPOINT_DIR, Config.BEST_MODEL_FILE)
+
+    if os.path.exists(checkpoint_file_path):
         logger.info("Found checkpoint, loading checkpoint ...")
-        start_epoch, best_loss = load_checkpoint(model, optimizer, scheduler, save_dir_file_name, device)
+        start_epoch, best_loss = load_checkpoint(model, optimizer, scheduler, checkpoint_file_path, device)
     else:
         best_loss = float("inf")
 
@@ -158,9 +152,11 @@ def prepare_and_train(model, lr_from_lr_finder, device, train_loader, val_loader
     # ============================================================
     start_time = time.time()
     for epoch in range(start_epoch, total_epochs):
-        train(model, device, train_loader, optimizer, scheduler, epoch)
-        test_loss = test(model, device, val_loader, epoch)
-        save_checkpoint(model, optimizer, scheduler, epoch, best_loss, save_dir_file_name)
+        train(model, device, train_loader, optimizer, scheduler, epoch, criterion, scaler, train_loss_data, train_accuracy, learning_rate_over_steps)
+        current_test_loss = test(model, device, val_loader, epoch, criterion, test_loss_data, test_accuracy, best_loss, best_model_file_path)
+        save_checkpoint(model, optimizer, scheduler, epoch, current_test_loss, checkpoint_file_path)
+        best_loss = min(best_loss, current_test_loss)
+
     end_time = time.time()
     elapsed_time = end_time - start_time
     print("Elapsed time:", elapsed_time, "seconds")

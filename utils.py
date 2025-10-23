@@ -4,6 +4,7 @@ import logging
 from torch_lr_finder import LRFinder
 from model_v1 import ResNet
 from torch import nn
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +49,8 @@ def dataset_visualizer(dataset_loader, n_images=12):
         img = batch_data[i].cpu().permute(1, 2, 0)
         # If you used ImageNet normalization, undo it:
         if img.min() < 0:  # implies normalized
-            mean = torch.tensor([0.485, 0.456, 0.406])
-            std = torch.tensor([0.229, 0.224, 0.225])
+            mean = torch.tensor(Config.NORM_MEAN).view(1, 1, 3)
+            std = torch.tensor(Config.NORM_STD).view(1, 1, 3)
             img = img * std + mean
             img = torch.clamp(img, 0, 1)
 
@@ -62,14 +63,14 @@ def dataset_visualizer(dataset_loader, n_images=12):
     plt.show()
 
 
-def indentify_optim_lr(device, train_loader):
+def indentify_optim_lr(device, train_loader, resnet_layers, num_classes, use_depthwise, lr_finder_end_lr, lr_finder_num_iter):
     amp_config = {
         'device_type': 'cuda',
         'dtype': torch.float16,
     }
     grad_scaler = torch.cuda.amp.GradScaler()
 
-    model = ResNet(layers=[2,2,3,2], num_classes=10, use_depthwise=(False, False, True, True)).to(device)
+    model = ResNet(layers=resnet_layers, num_classes=num_classes, use_depthwise=use_depthwise).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-4, weight_decay=1e-2)
 
@@ -77,6 +78,6 @@ def indentify_optim_lr(device, train_loader):
         model, optimizer, criterion, device=device,
         amp_backend='torch', amp_config=amp_config, grad_scaler=grad_scaler
     )
-    lr_finder.range_test(train_loader, end_lr=0.01, num_iter=60, step_mode='exp')
+    lr_finder.range_test(train_loader, end_lr=lr_finder_end_lr, num_iter=lr_finder_num_iter, step_mode='exp')
     lr_finder.plot()
     lr_finder.reset()
