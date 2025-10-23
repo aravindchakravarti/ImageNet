@@ -43,6 +43,7 @@ def main():
     logger.info(f"Using learning rate: {lr_from_lr_finder}, Type of lr = {type(lr_from_lr_finder)}")
 
     prepare_and_train(model, lr_from_lr_finder, device, train_loader, val_loader, total_epochs=Config.TOTAL_EPOCHS)
+    logger.info("Closing Main")
 
 if __name__ == '__main__':
     main()
