@@ -8,10 +8,30 @@ import sys
 import time
 from torch.optim.lr_scheduler import OneCycleLR
 from config import Config
-
-
+import csv
 import logging
+
 logger = logging.getLogger(__name__)
+
+
+def log_metrics_to_csv(log_path, epoch, train_loss, train_acc, test_loss, test_acc, lr):
+    """Appends training and testing metrics to a CSV file.
+
+    Args:
+        log_path (str): Path to the CSV file.
+        epoch (int): Current epoch number.
+        train_loss (float): Average training loss for the epoch.
+        train_acc (float): Training accuracy for the epoch.
+        test_loss (float): Average testing loss for the epoch.
+        test_acc (float): Testing accuracy for the epoch.
+        lr (float): Learning rate for the epoch.
+    """
+    file_exists = os.path.isfile(log_path)
+    with open(log_path, 'a', newline='') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(['epoch', 'train_loss', 'train_accuracy', 'test_loss', 'test_accuracy', 'learning_rate'])
+        writer.writerow([epoch, train_loss, train_acc, test_loss, test_acc, lr])
 
 
 def save_checkpoint(model, optimizer, scheduler, epoch, best_loss, path):
@@ -78,10 +98,11 @@ def train(model, device, train_loader, optimizer, scheduler, epoch, criterion, s
     train_accuracy.append(acc)
 
     print(f'\nTrain set (epoch {epoch}): Average loss: {avg_loss:.4f}, Accuracy: {correct}/{total} ({acc:.2f}%)')
+    return avg_loss, acc
 
-# ============================================================
+# ============================================================ 
 # 3️⃣ Testing Loop
-# ============================================================
+# ============================================================ 
 
 def test(model, device, test_loader, epoch, criterion, test_loss_data, test_accuracy, best_loss, save_dir_file_name):
     model.eval()
@@ -108,7 +129,7 @@ def test(model, device, test_loader, epoch, criterion, test_loss_data, test_accu
         torch.save(model.state_dict(), save_dir_file_name)
         logger.info(f"✅ Saved new best model at epoch {epoch} with loss {best_loss:.4f}")
 
-    return test_loss
+    return test_loss, acc
 
 def prepare_and_train(model, lr_from_lr_finder, device, train_loader, val_loader, total_epochs):
 
@@ -138,6 +159,12 @@ def prepare_and_train(model, lr_from_lr_finder, device, train_loader, val_loader
 
     start_epoch = 0
     os.makedirs(Config.CHECKPOINT_DIR, exist_ok=True)
+    
+    # Create log directory
+    log_dir = os.path.join(os.path.dirname(Config.CHECKPOINT_DIR), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file_path = os.path.join(log_dir, "training_log.csv")
+
     checkpoint_file_path = os.path.join(Config.CHECKPOINT_DIR, Config.CHECKPOINT_FILE)
     best_model_file_path = os.path.join(Config.CHECKPOINT_DIR, Config.BEST_MODEL_FILE)
 
@@ -147,13 +174,18 @@ def prepare_and_train(model, lr_from_lr_finder, device, train_loader, val_loader
     else:
         best_loss = float("inf")
 
-    # ============================================================
+    # ============================================================ 
     # 5️⃣ Main training loop
-    # ============================================================
+    # ============================================================ 
     start_time = time.time()
     for epoch in range(start_epoch, total_epochs):
-        train(model, device, train_loader, optimizer, scheduler, epoch, criterion, scaler, train_loss_data, train_accuracy, learning_rate_over_steps)
-        current_test_loss = test(model, device, val_loader, epoch, criterion, test_loss_data, test_accuracy, best_loss, best_model_file_path)
+        train_loss, train_acc = train(model, device, train_loader, optimizer, scheduler, epoch, criterion, scaler, train_loss_data, train_accuracy, learning_rate_over_steps)
+        current_test_loss, test_acc = test(model, device, val_loader, epoch, criterion, test_loss_data, test_accuracy, best_loss, best_model_file_path)
+        
+        # Log metrics to CSV
+        lr = optimizer.param_groups[0]['lr']
+        log_metrics_to_csv(log_file_path, epoch, train_loss, train_acc, current_test_loss, test_acc, lr)
+
         save_checkpoint(model, optimizer, scheduler, epoch, current_test_loss, checkpoint_file_path)
         best_loss = min(best_loss, current_test_loss)
 
