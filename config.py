@@ -20,7 +20,7 @@ class Config:
 
     # Training
     TOTAL_EPOCHS = 15
-    LEARNING_RATE = 3.1E-2 #1e-3  # Default LR, can be overridden by LR finder
+    LEARNING_RATE = 1.37E-02 #1e-3  # Default LR, can be overridden by LR finder
     WEIGHT_DECAY = 1e-4
     PCT_START = 0.3
     ANNEAL_STRATEGY = "cos"
@@ -33,7 +33,7 @@ class Config:
     BEST_MODEL_FILE = "best_model_imagenette.pt"
 
     # LR Finder
-    LR_FINDER_END_LR = 0.01
+    LR_FINDER_END_LR = 0.1
     LR_FINDER_NUM_ITER = 60
 
     # Logging

@@ -6,6 +6,7 @@ import numpy as np
 
 from torch import nn
 from config import Config
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -93,9 +94,30 @@ def identify_optim_lr(model, device, train_loader, lr_finder_end_lr, lr_finder_n
     # Alternatively, choose slightly lower (10x smaller)
     safe_lr = suggested_lr / 10
 
+
+    log_dir = os.path.join(os.path.dirname(Config.CHECKPOINT_DIR), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    save_fig_path = os.path.join(log_dir, "lr_finder_curve.png")
+
     # Plot and save
-    fig = lr_finder.plot()
-    fig.savefig('lr_finder_plot.png')
+    plot_result = lr_finder.plot()
+
+    # Handle different return types
+    if isinstance(plot_result, tuple):
+        # Assume (fig, ax) or (ax,)
+        candidate = plot_result[0]
+    else:
+        candidate = plot_result
+
+    # Get figure object
+    if hasattr(candidate, 'savefig'):
+        fig = candidate  # it's already a Figure
+    elif hasattr(candidate, 'get_figure'):
+        fig = candidate.get_figure()  # it's an Axes
+    else:
+        raise RuntimeError(f"Unexpected plot return type: {type(candidate)}")
+
+    fig.savefig(save_fig_path)
     plt.close(fig)
 
     lr_finder.reset()

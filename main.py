@@ -5,6 +5,7 @@ import torch
 from torchsummary import summary
 from model_train_utils import prepare_and_train
 from config import Config
+import sys
 
 # Conditionally import the model based on the configuration
 if Config.MODEL_VERSION == 'v1':
@@ -43,11 +44,15 @@ def main():
     summary(model, input_size=(3, Config.IMAGE_SIZE, Config.IMAGE_SIZE), device=str(device))
     
     lr_from_lr_finder = Config.LEARNING_RATE
-    if str(device) == 'cuda':
+    if lr_from_lr_finder == None:
         suggested_lr = identify_optim_lr(model, device, train_loader, Config.LR_FINDER_END_LR, Config.LR_FINDER_NUM_ITER)
         if suggested_lr:
             lr_from_lr_finder = suggested_lr
             logger.info(f"Using learning rate from LR finder: {lr_from_lr_finder}")
+
+        # Exiting because a human being (yeah!) need to manually see optimum LR and set that optimum lr in 
+        # config.py file!!!
+        sys.exit()
 
     logger.info(f"Using learning rate: {lr_from_lr_finder}, Type of lr = {type(lr_from_lr_finder)}")
 
