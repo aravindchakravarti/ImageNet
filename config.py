@@ -5,9 +5,9 @@ import os
 class Config:
     # Data
     DATA_SET_PATH = '/mnt/data/imagenet/'
-    BATCH_SIZE = 64
-    NUM_WORKERS = 4
-    IMAGE_SIZE = 32
+    BATCH_SIZE = 256
+    NUM_WORKERS = 8
+    IMAGE_SIZE = 224
     NORM_MEAN = [0.485, 0.456, 0.406]
     NORM_STD = [0.229, 0.224, 0.225]
     NUM_CLASSES = 1000
@@ -19,8 +19,8 @@ class Config:
     BASE_CHANNELS = 64
 
     # Training
-    TOTAL_EPOCHS = 15
-    LEARNING_RATE = 1.08E-02 #1.37E-02 #1e-3  # Default LR, can be overridden by LR finder
+    TOTAL_EPOCHS = 10
+    LEARNING_RATE = 2.22E-02 #1.08E-02 #1.37E-02 #1e-3  # Default LR, can be overridden by LR finder
     WEIGHT_DECAY = 1e-4
     PCT_START = 0.3
     ANNEAL_STRATEGY = "cos"
@@ -33,7 +33,7 @@ class Config:
     BEST_MODEL_FILE = "best_model_imagenette.pt"
 
     # LR Finder
-    LR_FINDER_END_LR = 0.1
+    LR_FINDER_END_LR = 0.7
     LR_FINDER_NUM_ITER = 60
 
     # Logging
