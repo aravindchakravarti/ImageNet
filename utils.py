@@ -62,7 +62,13 @@ def dataset_visualizer(dataset_loader, n_images=12):
         plt.title(label_text, fontsize=10)
         plt.xticks([])
         plt.yticks([])
-    plt.show()
+    
+    log_dir = os.path.join(os.path.dirname(Config.CHECKPOINT_DIR), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    save_path = os.path.join(log_dir, "visualize_data_color.png")
+    plt.savefig(save_path, bbox_inches="tight", dpi=150)
+    plt.close()
+    print(f"Visualization saved: {save_path}")
 
 
 def identify_optim_lr(model, device, train_loader, lr_finder_end_lr, lr_finder_num_iter):
