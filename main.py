@@ -1,11 +1,17 @@
 from dataset import get_train_test_loaders
-from model_v1 import ResNet
 import logging
 from utils import dataset_visualizer, identify_optim_lr
 import torch
 from torchsummary import summary
 from model_train_utils import prepare_and_train
 from config import Config
+
+# Conditionally import the model based on the configuration
+if Config.MODEL_VERSION == 'v1':
+    from model_v1 import ResNet
+elif Config.MODEL_VERSION == 'v2':
+    from model_v2 import get_model
+
 
 logging.basicConfig(
     level=getattr(logging, Config.LOG_LEVEL.upper()),
@@ -26,7 +32,10 @@ def main():
     
     dataset_visualizer(train_loader)
 
-    model = ResNet(layers=Config.RESNET_LAYERS, num_classes=Config.NUM_CLASSES, use_depthwise=Config.USE_DEPTHWISE).to(device)
+    if Config.MODEL_VERSION == 'v1':
+        model = ResNet(layers=Config.RESNET_LAYERS, num_classes=Config.NUM_CLASSES, use_depthwise=Config.USE_DEPTHWISE).to(device)
+    elif Config.MODEL_VERSION == 'v2':
+        model = get_model().to(device)
 
     dummy_data = torch.randn(5, 3, Config.IMAGE_SIZE, Config.IMAGE_SIZE).to(device)
     dummy_output = model(dummy_data)

@@ -13,6 +13,7 @@ class Config:
     NUM_CLASSES = 10
 
     # Model
+    MODEL_VERSION = "v2"  # "v1" for custom, "v2" for torchvision
     RESNET_LAYERS = [2, 2, 3, 2]
     USE_DEPTHWISE = (False, False, True, True)
     BASE_CHANNELS = 64
