@@ -5,7 +5,7 @@ import os
 class Config:
     # Data
     DATA_SET_PATH = '/mnt/data/imagenet/'
-    BATCH_SIZE = 256
+    BATCH_SIZE = 448
     NUM_WORKERS = 8
     IMAGE_SIZE = 224
     NORM_MEAN = [0.485, 0.456, 0.406]
@@ -19,8 +19,8 @@ class Config:
     BASE_CHANNELS = 64
 
     # Training
-    TOTAL_EPOCHS = 10
-    LEARNING_RATE = 2.22E-02 #1.08E-02 #1.37E-02 #1e-3  # Default LR, can be overridden by LR finder
+    TOTAL_EPOCHS = 70
+    LEARNING_RATE = 3.48E-02 #batch:256 2.22E-02 #1.08E-02 #1.37E-02 #1e-3  # Default LR, can be overridden by LR finder
     WEIGHT_DECAY = 1e-4
     PCT_START = 0.3
     ANNEAL_STRATEGY = "cos"
