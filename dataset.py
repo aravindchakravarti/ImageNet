@@ -51,6 +51,12 @@ def get_train_test_loaders(path, batch_size=64, image_size=224, norm_mean=[0.485
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(mean=norm_mean, std=norm_std),
+        transforms.RandomErasing(
+            p=0.5,                 # probability of applying
+            scale=(0.02, 0.33),    # area range of erasing
+            ratio=(0.3, 3.3),      # aspect ratio range
+            value=0,               # fill with black value
+        ),
     ])
 
     val_transform = transforms.Compose([
